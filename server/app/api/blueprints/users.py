@@ -3,6 +3,8 @@ import re
 from sqlalchemy import exc
 from app import db
 from app.api.models.User import User
+# Authentication
+from functools import wraps
 
 user_blueprint = Blueprint('user', __name__)
 
@@ -61,3 +63,24 @@ def post():
     return jsonify({"message": "User registered succesfully"}), 201
 
 
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get('Authorization')
+        if not token:
+            return jsonify({'error': 'Token missing'}), 401
+        
+        # Code to validate token
+
+        return f(*args, **kwargs)
+    return decorated
+
+@user_blueprint.route('/api/users/<int:user_id>', methods=['GET'], strict_slashes=False)
+@token_required
+def get_user(user_id):
+    record = User.query.get(user_id)
+    if not record:
+        return jsonify({
+            'errors': [f'No record with id={user_id} found.']
+        }), 404
+    return jsonify(record.to_json()), 200
