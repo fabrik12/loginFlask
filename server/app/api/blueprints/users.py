@@ -1,5 +1,5 @@
-from flask import Blueprint, jsonify, request
-import re
+from flask import Blueprint, jsonify, request, current_app
+import re, jwt
 from sqlalchemy import exc
 from app import db
 from app.api.models.User import User
@@ -66,21 +66,47 @@ def post():
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+        token = None
+        # Read token with format Bearer
+        if 'Authorization' in request.headers:
+            auth_header = request.headers['Authorization']
+            parts = auth_header.split()
+            if len(parts) == 2 and parts[0].lower() == "bearer":
+                token = parts[1]
+        if not token:
+            return jsonify({'error': 'A valid  token is missing'}), 401
+        
+        try:
+            # Validate token and automatic expiration
+            payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
+            from app.api.models.User import User
+            current_user = User.query.get(payload['user_id'])
+            if not current_user:
+                return jsonify({'error': 'User not found.'}), 401
+        except jwt.ExpiredSignatureError:
+            return jsonify({'error': 'Token has expired'}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({'error': 'Invalid token'}), 401
+
+        # Pass the autenticate user to endpoint 
+        return f(current_user, *args, **kwargs)
+        '''
         token = request.headers.get('Authorization')
         if not token:
             return jsonify({'error': 'Token missing'}), 401
-        
-        # Code to validate token
-
-        return f(*args, **kwargs)
+        '''
     return decorated
 
 @user_blueprint.route('/api/users/<int:user_id>', methods=['GET'], strict_slashes=False)
 @token_required
-def get_user(user_id):
+def get_user(current_user, user_id):
     record = User.query.get(user_id)
     if not record:
         return jsonify({
-            'errors': [f'No record with id={user_id} found.']
-        }), 404
+            'errors': [f'No record with id={user_id} found.']}), 404
+
+    # Allow the user to view their own information
+    if current_user.id != record.id:
+        return jsonify({'error': 'Unauthorized access'}), 403
+
     return jsonify(record.to_json()), 200
