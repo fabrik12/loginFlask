@@ -56,9 +56,9 @@ def post():
         return jsonify({"error": "Email has been used"}), 400
     
     # Create and save new user
-    new_user = User(username=username, email=email)
-    new_user.set_password(password) #Hash for the password
-    db.session.add(new_user)
+    edit_user = User(username=username, email=email)
+    edit_user.set_password(password) #Hash for the password
+    db.session.add(edit_user)
     db.session.commit()
 
     return jsonify({"message": "User registered succesfully"}), 201

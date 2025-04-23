@@ -8,7 +8,7 @@ class User(db.Model):
     username = db.Column(db.String(64), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
-    reset_token = db.Column(db.String(128), nullable=True)
+    reset_token = db.Column(db.String(256), nullable=True)
     reset_token_expires = db.Column(db.DateTime, nullable=True)
     creation_date = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -20,8 +20,6 @@ class User(db.Model):
         return check_password_hash(self.password_hash, password)
 
     # Methods management tokens    
-
-
     def to_json(self):
         return {
             'id': self.id,
