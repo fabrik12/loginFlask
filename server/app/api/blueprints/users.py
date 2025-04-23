@@ -5,6 +5,7 @@ from app import db
 from app.api.models.User import User
 # Authentication
 from functools import wraps
+from auth_blacklist import is_token_blacklisted
 
 user_blueprint = Blueprint('user', __name__)
 
@@ -75,6 +76,11 @@ def token_required(f):
                 token = parts[1]
         if not token:
             return jsonify({'error': 'A valid  token is missing'}), 401
+        
+        # Verified token in blacklist
+        if is_token_blacklisted(token):
+            return jsonify({'error': 'Token has been revoked'}), 401
+
         
         try:
             # Validate token and automatic expiration

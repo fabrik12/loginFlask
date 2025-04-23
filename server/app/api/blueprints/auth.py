@@ -4,6 +4,9 @@ import re, datetime, jwt
 from sqlalchemy import exc
 from app import db
 from app.api.models.User import User
+# Authentication
+from users import token_required
+from auth_blacklist import add_token
 
 auth_blueprint = Blueprint('auth', __name__)
 
@@ -25,3 +28,24 @@ def login():
     }
     token = jwt.encode(payload, current_app.config['SECRET_KEY'], algorithm='HS256')
     return jsonify({'token': token}), 200
+
+@auth_blueprint.route('/api/auth/logout', methods=['POST'], strict_slashes=False)
+@token_required
+def logout(current_user):
+    auth_header = request.headers.get('Authorization')
+    token = auth_header.split()[1] if auth_header else None
+
+    if token:
+        try:
+            # Decode token and extract its expiration datetime
+            payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms='HS256')
+            
+            expires_at = datetime.utcfromtimestamp(payload['exp'])
+            # Add token to blacklist next to its expiration datetime
+            add_token(token, expires_at)
+        except jwt.InvalidTokenError:
+            return jsonify({"error": "Invalid token"}), 400
+
+        return jsonify({"message": "Logout successful"}), 200
+    else:
+            return jsonify({"error": "Token not provided"}), 400
