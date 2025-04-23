@@ -5,7 +5,7 @@ from app import db
 from app.api.models.User import User
 # Authentication
 from functools import wraps
-from auth_blacklist import is_token_blacklisted
+from app.api.auth_blacklist import is_token_blacklisted
 
 user_blueprint = Blueprint('user', __name__)
 

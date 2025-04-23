@@ -5,8 +5,8 @@ from sqlalchemy import exc
 from app import db
 from app.api.models.User import User
 # Authentication
-from users import token_required
-from auth_blacklist import add_token
+from app.api.blueprints.users import token_required
+from app.api.auth_blacklist import add_token
 
 auth_blueprint = Blueprint('auth', __name__)
 
@@ -39,8 +39,8 @@ def logout(current_user):
         try:
             # Decode token and extract its expiration datetime
             payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms='HS256')
-            
-            expires_at = datetime.utcfromtimestamp(payload['exp'])
+
+            expires_at = datetime.datetime.utcfromtimestamp(payload['exp'])
             # Add token to blacklist next to its expiration datetime
             add_token(token, expires_at)
         except jwt.InvalidTokenError:
